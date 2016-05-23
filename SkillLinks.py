@@ -17,6 +17,11 @@ if __name__ == "__main__":
     testing = []
     test_label = []
 
+    # data must be loaded in a 3 dimensional array:
+    # dimension 1: samples - one element for each training sample
+    # dimension 2: skill - 2 elements per sample, each containing 1 skill feature vector
+    # dimension 3: feature - each covariate to be used as input to the network
+    #                        (num_input below should match the number of features)
 
 
     # hyper parameters
@@ -172,8 +177,8 @@ if __name__ == "__main__":
                     batch_label.append(tr_label[ktrain[j]])
 
                 # update and get the cost
-                epoch += train_AB(batch_sample,batch_label)
-                epoch += train_BA(batch_sample, batch_label)
+                epoch += train_AB(batch_sample[0],batch_label)
+                epoch += train_BA(batch_sample[1], batch_label)
 
                 n_train += 2
 
@@ -184,8 +189,8 @@ if __name__ == "__main__":
                 label.append(tr_label[ktest[i]])
                 n_test += 2
 
-            eval += test_AB(sample, label)
-            eval += test_BA(sample, label)
+            eval += test_AB(sample[0], label)
+            eval += test_BA(sample[1], label)
 
         train_err.append(epoch / n_train)
         val_err.append(eval / n_test)
@@ -224,20 +229,19 @@ if __name__ == "__main__":
                     batch_label.append(tr_label[ktrain[j]])
 
                 # update and get the cost
-                epoch += train_AB(batch_sample, batch_label)
-                epoch += train_BA(batch_sample, batch_label)
+                epoch += train_network(batch_sample[0],batch_sample[1],batch_label)
 
-                n_train += 2
+                n_train += 1
 
             sample = []
             label = []
             for i in range(0, len(ktest)):
                 sample.append(training[ktest[i]])
                 label.append(tr_label[ktest[i]])
-                n_test += 2
+                n_test += 1
 
-            eval += test_AB(sample, label)
-            eval += test_BA(sample, label)
+            eval += test_network(sample[0],sample[1],label)
+
 
         train_err.append(epoch / n_train)
         val_err.append(eval / n_test)
