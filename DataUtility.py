@@ -44,6 +44,12 @@ def diceRoll(sides):
 def clamp(x,min,max):
     return MIN(max, MAX(min, x))
 
+def exists(x,arr):
+    for i in range(0,len(arr)):
+        if x == arr[i]:
+            return True
+    return False
+
 def normalize(v, method='max'):
     m = np.nanmean(v)
     s = np.nanstd(v)
