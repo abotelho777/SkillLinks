@@ -75,6 +75,7 @@ class Student:
         speed = means[1]
         hint = means[2]
 
+        self.assignment_ID += 1
         self.completed_assignments.append(skill.name)
 
         return [skill.name, self.assignment_ID, self.ID, speed, pcor,
