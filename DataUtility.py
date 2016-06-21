@@ -1,13 +1,48 @@
 import numpy as np
 from scipy import misc as msc
 import os
-from scipy.stats import bernoulli,norm
+from scipy.stats import bernoulli,norm as normal
+import random
 
-def bern(p,shape):
+def bern(p,shape=1):
+    if shape == 1:
+        return bernoulli.rvs(p,size=shape)[0]
     return bernoulli.rvs(p,size=shape)
 
-def norm(shape):
-    return norm.rvs(size=shape)
+def norm(shape=1,center=0):
+    if shape == 1:
+        return normal.rvs(loc=center,size=shape)[0]
+    return normal.rvs(loc=center,size=shape)
+
+def rand(min=0,max=1,size=1):
+    rv = []
+    for i in range(0,size):
+        if min==0 and max==1:
+            rv.append(random.randrange(min,1000)/1000.0)
+        else:
+            rv.append(random.randrange(min,max))
+    if size == 1:
+        return rv[0]
+    else:
+        return rv
+
+def MIN(x,y):
+    if (x < y):
+        return x
+    else:
+        return y
+
+def MAX(x,y):
+    if (x > y):
+        return x
+    else:
+        return y
+
+def diceRoll(sides):
+    return rand(0,sides)
+
+def clamp(x,min,max):
+    return MIN(max, MAX(min, x))
 
 def normalize(v, method='max'):
     m = np.nanmean(v)
@@ -66,7 +101,7 @@ def loadCSV(filename):
     return csvarr
 
 def writetoCSV(ar,filename):
-    ar = np.array(transpose(ar))
+    ar = np.array(ar)
     assert len(ar.shape) <= 2
 
     with open(filename + '.csv', 'w') as f:
