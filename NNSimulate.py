@@ -57,7 +57,7 @@ class Student:
         sequence = []
         complete = 1
         while consecutive < 3:
-            result = self.get_result(skill.next_problem(),problem_count+1)
+            result = self.get_result(skill.next_problem(),problem_count+1,skill.name)
             sequence.append(result)
             if result[0] == 1:
                 consecutive += 1
@@ -122,18 +122,25 @@ if __name__ == "__main__":
                                 data[index][2],
                                 du.clamp(np.random.normal(0.2, 0.1), 0.001, 1)))
 
-    A = Skill('A',0.5,0.05)
+    A = Skill('A', 0.5, 0.05)
+    B = Skill('B', 0.6, 0.1)
+    C = Skill('C', 0.3, 0.05)
 
     link = []
 
     # practice gives increase to knowledge and decrease to speed and hint usage
-    link.append(SkillLink('A', 'A', 0.05, -5, -0.1))
+    link.append(SkillLink('A', 'A', 0.05, -2, -0.15))
+    link.append(SkillLink('A', 'B', 0.1, -5, -0.05))
 
     sim_header = ['Skill', 'Assignment', 'Student', 'Speed', 'PercentCorrect',
                   'MasterySpeed', 'HintUsage', 'Complete']
     sim_data = []
     sim_data.append(sim_header)
     for i in range(0,num_students):
+        students[i].clear_history()
         sim_data.append(students[i].do_assignment(A))
+        sim_data.append(students[i].do_assignment(B))
+        sim_data.append(students[i].do_assignment(A))
+        sim_data.append(students[i].do_assignment(C))
 
     du.writetoCSV(sim_data, 'simulated_data.csv')
