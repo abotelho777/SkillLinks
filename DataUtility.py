@@ -121,11 +121,41 @@ def writetoCSV(ar,filename):
     f.close()
 
 def loadCSVwithHeaders(filename):
-    data = loadCSV(filename)
-    headers = np.array(data[0])
-    data = np.array(data)
-    data = np.delete(data, 0, 0)
-    return data,headers
+    dataset = loadCSV(filename)
+    headers = np.array(dataset[0])
+    data = []
+    for i in range(1,len(dataset)):
+        row = []
+        for j in range(0,len(dataset[i])):
+            k = 0
+            # try converting to a number, if not, leave it
+            try:
+                k = float(dataset[i][j])
+            except ValueError:
+                # do nothing constructive
+                k = dataset[i][j]
+            row.append(k)
+        data.append(row)
+
+    #print data
+    return np.array(data),headers
+
+def convert_to_floats(ar):
+    data = []
+    for i in range(0, len(ar)):
+        row = []
+        for j in range(0, len(ar[i])):
+            k = 0
+            # try converting to a number, if not, leave it
+            try:
+                k = float(ar[i][j])
+            except ValueError:
+                # do nothing constructive
+                k = ar[i][j]
+            row.append(k)
+        data.append(row)
+
+    return data
 
 def getColumn(ar,col,startRow = 0):
     c = []
@@ -194,6 +224,23 @@ def split_training_test(x,y,training_size=0.8):
 
     return np.array(X_Train),np.array(X_Test),np.array(Y_Train),np.array(Y_Test)
 
+def print_label_distribution(flat_labels,label_names=None):
+    print "\nLabel Distribution:"
+
+    labels = transpose(flat_labels)
+
+    if label_names is not None:
+        assert len(label_names) == len(labels)
+    else:
+        label_names = []
+        for i in range(0, len(labels)):
+            label_names[i] = "Label_" + str(i)
+
+    for i in range(0,len(labels)):
+        print "   {:<15}:".format(label_names[i]), \
+            "{:<6}".format(np.nansum(np.array(labels[i]))), \
+            "({0:.0f}%)".format((float(np.nansum(np.array(labels[i])))/len(labels[i]))*100)
+
 def shuffle(data,labels=None):
 
     if labels is not None:
@@ -215,6 +262,15 @@ def shuffle(data,labels=None):
 
     return data,labels
 
+def len_deepest(ar):
+    x = np.array(ar).tolist()
+    assert type(x) == list
+
+    while type(np.array(x[0]).tolist()) == list:
+        x = np.array(x[0]).tolist()
+
+    return len(x)
+
 def select(ar, val, op = '==',column = None):
     aprime = []
 
@@ -222,13 +278,25 @@ def select(ar, val, op = '==',column = None):
         if (op == '=='):
             aprime = [element for element in ar if element[column] == val]
         elif (op == '<='):
-            aprime = [element for element in ar if element[column] <= val]
+            try:
+                aprime = [element for element in ar if float(element[column]) <= float(val)]
+            except ValueError:
+                aprime = [element for element in ar if element[column] <= val]
         elif (op == '>='):
-            aprime = [element for element in ar if element[column] >= val]
+            try:
+                aprime = [element for element in ar if float(element[column]) >= float(val)]
+            except ValueError:
+                aprime = [element for element in ar if element[column] >= val]
         elif (op == '<'):
-            aprime = [element for element in ar if element[column] < val]
+            try:
+                aprime = [element for element in ar if float(element[column]) < float(val)]
+            except ValueError:
+                aprime = [element for element in ar if element[column] < val]
         elif (op == '>'):
-            aprime = [element for element in ar if element[column] > val]
+            try:
+                aprime = [element for element in ar if float(element[column]) > float(val)]
+            except ValueError:
+                aprime = [element for element in ar if element[column] > val]
         elif (op == '!='):
             aprime = [element for element in ar if element[column] != val]
         else:
