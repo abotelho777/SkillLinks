@@ -241,6 +241,22 @@ def print_label_distribution(flat_labels,label_names=None):
             "{:<6}".format(np.nansum(np.array(labels[i]))), \
             "({0:.0f}%)".format((float(np.nansum(np.array(labels[i])))/len(labels[i]))*100)
 
+
+def sample(x,y,p=0.8):
+    assert p > 0 and p <= 1
+    assert len(x) == len(y)
+
+    X = []
+    X_label = []
+
+    for i in range(0,len(x)):
+        from random import randint
+        if randint(0,100) < int(100*p)-1:
+            X.append(x[i])
+            X_label.append(y[i])
+
+    return np.array(X),np.array(X_label)
+
 def shuffle(data,labels=None):
 
     if labels is not None:
@@ -264,7 +280,7 @@ def shuffle(data,labels=None):
 
 def len_deepest(ar):
     x = np.array(ar).tolist()
-    assert type(x) == list
+    assert type(x) == list and len(x) > 0
 
     while type(np.array(x[0]).tolist()) == list:
         x = np.array(x[0]).tolist()
@@ -381,6 +397,7 @@ def numerate(ar):
 
 def transpose(ar):
     L = len(ar)
+    assert L > 0
     if isinstance(ar[0],float):
         for i in range(0,L):
             ar[i] = [ar[i]]

@@ -67,8 +67,8 @@ class AutoEncoder:
 
         if not self.isInitialized:
             self.l_in = lasagne.layers.InputLayer(shape=(None, self.num_input))
-            self.l_drop = lasagne.layers.DropoutLayer(self.l_in, p=self.dropout)
-            self.l_hidden = lasagne.layers.DenseLayer(self.l_drop, num_units=self.num_units,
+            # self.l_drop = lasagne.layers.DropoutLayer(self.l_in, p=self.dropout)
+            self.l_hidden = lasagne.layers.DenseLayer(self.l_in, num_units=self.num_units,
                                                       W=lasagne.init.Normal(),
                                                       nonlinearity=lasagne.nonlinearities.sigmoid)
             self.l_inverse = lasagne.layers.InverseLayer(self.l_hidden, self.l_hidden)
@@ -127,7 +127,7 @@ class AutoEncoder:
 
         strat_label = []
         for i in range(0, len(training)):
-            strat_label.append(output[i].index(max(output[i])))
+            strat_label.append(1)
 
         skf = StratifiedKFold(strat_label, n_folds=self.num_folds)
 
@@ -214,6 +214,7 @@ class FFNNet:
         self.l_in = None
         self.l_drop = None
         self.l_hidden = None
+        self.l_hidden2 = None
         self.l_output = None
 
         self.target_values = T.matrix('target_output')
@@ -257,6 +258,9 @@ class FFNNet:
             self.l_in = lasagne.layers.InputLayer(shape=(None, self.num_input))
             self.l_drop = lasagne.layers.DropoutLayer(self.l_in, p=self.dropout)
             self.l_hidden = lasagne.layers.DenseLayer(self.l_drop, num_units=self.num_units,
+                                                      W=lasagne.init.Normal(),
+                                                      nonlinearity=lasagne.nonlinearities.sigmoid)
+            self.l_hidden2 = lasagne.layers.DenseLayer(self.l_hidden, num_units=self.num_units,
                                                       W=lasagne.init.Normal(),
                                                       nonlinearity=lasagne.nonlinearities.sigmoid)
             self.l_output = lasagne.layers.DenseLayer(self.l_hidden, num_units=self.num_output,
@@ -478,6 +482,28 @@ class FFNNet:
 
         return predictions
 
+# adds redundancy for students
+def add_representation(data,labels,label_column,duplicate=10,threshold=0.0):
+    assert len(data) == len(labels)
+    print "Adding Representation to label:",label_column
+    ndata = []
+    nlabel = []
+    for i in range(0,len(data)):
+        represent = 1
+        if labels[i] is list:
+            if np.nanmean(labels[i], 0)[label_column] > threshold:
+                represent = duplicate
+        else:
+            if labels[i][label_column] > threshold:
+                represent = duplicate
+
+        for j in range(0,represent):
+            ndata.append(data[i])
+            nlabel.append(labels[i])
+
+    ndata,nlabel = du.shuffle(ndata,nlabel)
+    return np.array(ndata),np.array(nlabel)
+
 def load_skill_data(data_filename, prereq_file, nolink_file):
     print "Loading Data..."
     data, headers = du.loadCSVwithHeaders(data_filename)
@@ -494,115 +520,99 @@ def load_skill_data(data_filename, prereq_file, nolink_file):
     for p in prereqs:
         print p[0], '->', p[1]
 
-    for p in prereqs:
-        #print p[0], '->', p[1]
+    students = du.unique(du.transpose(data)[2])
+    for i in range(0, len(students)):
+        student_set = du.select(data, students[i], '==', 2)
 
-        students = du.unique(du.transpose(data)[2])
-        for i in range(0,len(students)):
-            ##################################################
-            student_set = du.select(data,students[i],'==',2)
-            post = du.select(student_set,p[1],'==',0)
-            if len(post) == 0:
-                break
-            post = post[0]
-            pre = du.select(du.select(student_set, p[0],'==', 0),post[1],'<',1)
-            rem = du.select(du.select(student_set, p[0], '==', 0), post[1], '>', 1)
-
-            if len(pre) == 0 or len(rem) == 0:
-                break
-
-            pre = pre[0]
-            rem = rem[0]
-
-            samp_pre = []
-            samp_post = []
-            samp_rem = []
-            for j in range(3,8):
-                samp_pre.append(pre[j])
-                samp_post.append(post[j])
-                samp_rem.append(rem[j])
-
-            samples.append([samp_pre,samp_post,samp_rem,[p[0],p[1]]])
-            labels.append([1,0,0])
-
-            #print pre
-            #print post
-            #print rem
-            #print ' '
-            ##################################################
-            ##################################################
-            student_set = du.select(data, students[i], '==', 2)
-            post = du.select(student_set, p[0], '==', 0)
-            if len(post) == 0:
-                break
-            post = post[-1]
-            pre = du.select(du.select(student_set, p[1], '==', 0), post[1], '<', 1)
-            rem = du.select(du.select(student_set, p[1], '==', 0), post[1], '>', 1)
-
-            if len(pre) == 0 or len(rem) == 0:
-                break
-
-            pre = pre[0]
-            rem = rem[0]
-
-            samp_pre = []
-            samp_post = []
-            samp_rem = []
-            for j in range(3, 8):
-                samp_pre.append(pre[j])
-                samp_post.append(post[j])
-                samp_rem.append(rem[j])
-
-            samples.append([samp_pre, samp_post, samp_rem,[p[1],p[0]]])
-            labels.append([0, 0, 1])
-
-            # print pre
-            # print post
-            # print rem
-            # print ' '
-            ##################################################
-
-
-    for p in nolink:
-        # print p[0], '->', p[1]
-
-        students = du.unique(du.transpose(data)[2])
-        for i in range(0, len(students)):
-            ##################################################
-            student_set = du.select(data, students[i], '==', 2)
+        for p in prereqs:
             post = du.select(student_set, p[1], '==', 0)
-            if len(post) == 0:
-                break
-            post = post[0]
-            pre = du.select(du.select(student_set, p[0], '==', 0), post[1], '<', 1)
-            rem = du.select(du.select(student_set, p[0], '==', 0), post[1], '>', 1)
+            if not len(post) == 0:
 
-            if len(pre) == 0 or len(rem) == 0:
-                break
+                post = post[0]
+                pre = du.select(du.select(student_set, p[0], '==', 0), post[1], '<', 1)
+                rem = du.select(du.select(student_set, p[0], '==', 0), post[1], '>', 1)
 
-            pre = pre[0]
-            rem = rem[0]
+                if not (len(pre) == 0 or len(rem) == 0):
+                    pre = pre[0]
+                    rem = rem[0]
 
-            samp_pre = []
-            samp_post = []
-            samp_rem = []
-            for j in range(3, 8):
-                samp_pre.append(pre[j])
-                samp_post.append(post[j])
-                samp_rem.append(rem[j])
+                    samp_pre = []
+                    samp_post = []
+                    samp_rem = []
+                    for j in range(3, 8):
+                        samp_pre.append(pre[j])
+                        samp_post.append(post[j])
+                        samp_rem.append(rem[j])
 
-            samples.append([samp_pre, samp_post, samp_rem,[p[0],p[1]]])
-            labels.append([0, 1, 0])
+                    samples.append([samp_pre, samp_post, samp_rem, [p[0], p[1]]])
+                    labels.append([1, 0, 0])
 
-            # print pre
-            # print post
-            # print rem
-            # print ' '
-            ##################################################
+                    # print pre
+                    # print post
+                    # print rem
+                    # print ' '
+
+            post = du.select(student_set, p[0], '==', 0)
+            if not len(post) == 0:
+                post = post[-1]
+                pre = du.select(du.select(student_set, p[1], '==', 0), post[1], '<', 1)
+                rem = du.select(du.select(student_set, p[1], '==', 0), post[1], '>', 1)
+
+                if not (len(pre) == 0 or len(rem) == 0):
+                    pre = pre[0]
+                    rem = rem[0]
+
+                    samp_pre = []
+                    samp_post = []
+                    samp_rem = []
+                    for j in range(3, 8):
+                        samp_pre.append(pre[j])
+                        samp_post.append(post[j])
+                        samp_rem.append(rem[j])
+
+                    samples.append([samp_pre, samp_post, samp_rem, [p[1], p[0]]])
+                    labels.append([0, 0, 1])
+
+                    # print pre
+                    # print post
+                    # print rem
+                    # print ' '
+        for p in nolink:
+            post = du.select(student_set, p[1], '==', 0)
+            if not len(post) == 0:
+                post = post[0]
+                pre = du.select(du.select(student_set, p[0], '==', 0), post[1], '<', 1)
+                rem = du.select(du.select(student_set, p[0], '==', 0), post[1], '>', 1)
+
+                if not (len(pre) == 0 or len(rem) == 0):
+                    pre = pre[0]
+                    rem = rem[0]
+
+                    samp_pre = []
+                    samp_post = []
+                    samp_rem = []
+                    for j in range(3, 8):
+                        samp_pre.append(pre[j])
+                        samp_post.append(post[j])
+                        samp_rem.append(rem[j])
+
+                    samples.append([samp_pre, samp_post, samp_rem, [p[0], p[1]]])
+                    labels.append([0, 1, 0])
+
+                    # print pre
+                    # print post
+                    # print rem
+                    # print ' '
+
+# =================================================================
+
+    if len(labels) == 0:
+        print "\nNO USABLE SAMPLES EXIST"
+        exit()
+
     du.print_label_distribution(labels, ['Prerequisite','Non-Link','Reversed'])
     samples,labels = du.shuffle(samples, labels)
     return samples,labels
-
 
 def split_for_autoencoding(samples):
     ini_input = []
@@ -632,31 +642,55 @@ if __name__ == "__main__":
     samples,labels = load_skill_data('simulated_data.csv','simulated_hierarchy.csv','simulated_hierarchy_nonlink.csv')
     tr_samples, t_samples, tr_labels,t_labels = du.split_training_test(samples,labels)
 
-    ini_input, ini_output, rem_input, rem_output = split_for_autoencoding(tr_samples)
+    t_tr_labels = du.transpose(tr_labels)
+    import math
+    pre_rep = int(math.floor((len(t_tr_labels[0]) / np.nansum(t_tr_labels[0])) + 1))
+    non_rep = int(math.floor((len(t_tr_labels[1]) / np.nansum(t_tr_labels[1])) + 1))
+    rev_rep = int(math.floor((len(t_tr_labels[2]) / np.nansum(t_tr_labels[2])) + 1))
 
-    hidden = 10
-    step = 0.1
-    drop = 0.3
-    batch = 10
-    epoch = 20
+    print pre_rep, non_rep, rev_rep
+
+    re_tr_samples, re_tr_labels = add_representation(tr_samples, tr_labels, 0, pre_rep)
+    re_tr_samples, re_tr_labels = add_representation(re_tr_samples, re_tr_labels, 1, non_rep)
+    re_tr_samples, re_tr_labels = add_representation(re_tr_samples, re_tr_labels, 2, rev_rep)
+
+    re_tr_samples, re_tr_labels = du.sample(re_tr_samples,re_tr_labels,p=0.2)
+
+    du.print_label_distribution(re_tr_labels, ['Prerequisite', 'Non-Link', 'Reversed'])
+
+    ini_input, ini_output, rem_input, rem_output = split_for_autoencoding(re_tr_samples)
+
+    encoder_hidden = 4
+    encoder_step = 0.001
+    encoder_drop = 0.2
+    encoder_batch = 3
+    encoder_epochs = 5
+
+    hidden = 5
+    step = 0.001
+    drop = 0.2
+    batch = 3
+    epoch = 10
     folds = 10
 
     ### TRAINING ###
-    AB = AutoEncoder(hidden)
-    AB.set_hyperparams(step,drop,batch,epoch,folds)
+    AB = AutoEncoder(encoder_hidden)
+    AB.set_hyperparams(encoder_step,encoder_drop,encoder_batch,encoder_epochs,folds)
     AB.train(ini_input, ini_output)
 
-    BA = AutoEncoder(hidden)
-    BA.set_hyperparams(step,drop,batch,epoch,folds)
+    BA = AutoEncoder(encoder_hidden)
+    BA.set_hyperparams(encoder_step,encoder_drop,encoder_batch,encoder_epochs,folds)
     BA.train(rem_input, rem_output)
 
-    AA = AutoEncoder(hidden)
-    AA.set_hyperparams(step, drop, batch, epoch, folds)
-    AA.train(ini_input, rem_output)
+    # AA = AutoEncoder(encoder_hidden)
+    # AA.set_hyperparams(encoder_step, encoder_drop, encoder_batch, encoder_epochs, folds)
+    # AA.train(ini_input, rem_output)
+
+    # ini_input, ini_output, rem_input, rem_output = split_for_autoencoding(re_tr_samples)
 
     AB_pred = AB.get_hidden_layer(ini_input)
     BA_pred = BA.get_hidden_layer(rem_input)
-    AA_pred = AA.get_hidden_layer(ini_input)
+    # AA_pred = AA.get_hidden_layer(ini_input)
 
     merged = []
     for p in range(0,len(AB_pred)):
@@ -664,19 +698,23 @@ if __name__ == "__main__":
         for h in range(0,len(AB_pred[p])):
             s.append(AB_pred[p][h])
             s.append(BA_pred[p][h])
-            s.append(AA_pred[p][h])
+            # s.append(AA_pred[p][h])
         merged.append(s)
 
-    FF = FFNNet(10)
+    #CAP = AutoEncoder(20)
+    #CAP.set_hyperparams(encoder_step,encoder_drop,encoder_batch,encoder_epochs,folds)
+    #CAP.train(merged)
+
+    FF = FFNNet(hidden)
     FF.set_hyperparams(step,drop,batch,epoch,folds)
-    FF.train(merged,tr_labels)
+    FF.train(merged,re_tr_labels)
 
     ### TESTING ###
     ini_input, ini_output, rem_input, rem_output = split_for_autoencoding(t_samples)
 
     AB_pred = AB.get_hidden_layer(ini_input)
     BA_pred = BA.get_hidden_layer(rem_input)
-    AA_pred = AA.get_hidden_layer(ini_input)
+    # AA_pred = AA.get_hidden_layer(ini_input)
 
     merged = []
     for p in range(0, len(AB_pred)):
@@ -684,16 +722,15 @@ if __name__ == "__main__":
         for h in range(0, len(AB_pred[p])):
             s.append(AB_pred[p][h])
             s.append(BA_pred[p][h])
-            s.append(AA_pred[p][h])
+            # s.append(AA_pred[p][h])
         merged.append(s)
 
     preds = FF.test(merged,t_labels,['Prerequisite', 'Non-Link', 'Reversed'])
 
-    table = [["Prereq","Postreq","Pred_Prereq","Pred_NonLink","Pred_Reverse","Label_Prereq",
+    table = [["Link","Pred_Prereq","Pred_NonLink","Pred_Reverse","Label_Prereq",
               "Label_NonLink","Label_Reverse"]]
     for i in range(0,len(preds)):
-        table.append([t_samples[i][3][0],t_samples[i][3][1],preds[i][0],preds[i][1],preds[i][2],
+        table.append([t_samples[i][3][0]+t_samples[i][3][1],preds[i][0],preds[i][1],preds[i][2],
                t_labels[i][0],t_labels[i][1],t_labels[i][2]])
-
 
     du.writetoCSV(table,"prediction_values")
